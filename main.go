@@ -3,6 +3,7 @@ package main
 import (
 	"code.gitea.io/gitea/modules/structs"
 	"code.gitea.io/sdk/gitea"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -23,9 +24,9 @@ func main() {
 
 	opt := structs.CreateReleaseOption{
 		TagName: parseEnvOrFile("PLUGIN_TAG"),
-		Target: os.Getenv("DRONE_COMMIT"),
-		Title: parseEnvOrFile("PLUGIN_TITLE"),
-		Note: parseEnvOrFile("PLUGIN_BODY"),
+		Target:  os.Getenv("DRONE_COMMIT"),
+		Title:   parseEnvOrFile("PLUGIN_TITLE"),
+		Note:    parseEnvOrFile("PLUGIN_BODY"),
 	}
 
 	release, err := client.CreateRelease(namespace, repo, opt)
@@ -34,7 +35,7 @@ func main() {
 		log.Fatalln("Error creating release:", err)
 	}
 
-	log.Println("Release created:", release.URL)
+	fmt.Println("Release created:", release.ID)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -62,7 +63,7 @@ func main() {
 			panic("Unable to attach file: " + err.Error())
 		}
 
-		log.Println("Attached " + attachment.Name)
+		fmt.Println("Attached " + attachment.Name)
 	}
 }
 
