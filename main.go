@@ -45,22 +45,32 @@ func main() {
 			if err != nil {
 				log.Fatalln("Unable to delete release:", err)
 			}
+
+			log.Fatalln("Fatal error creating release:", r)
 		}
 	}()
 
 	files := parseFiles()
 
+	fmt.Println("Uploading files " + strings.Join(files, ", "))
+
 	for _, file := range files {
 		f, err := os.Open(file)
 
 		if err != nil {
+			fmt.Println("Unable to open file " + file + ": " + err.Error())
 			continue
 		}
 
+		fmt.Println("Attaching file " + file)
+
 		attachment, err := client.CreateReleaseAttachment(namespace, repo, release.ID, f, path.Base(file))
 
+		f.Close()
+
 		if err != nil {
-			panic("Unable to attach file: " + err.Error())
+			fmt.Println("Unable to open file " + file + ": " + err.Error())
+			continue
 		}
 
 		fmt.Println("Attached " + attachment.Name)
@@ -74,7 +84,7 @@ func parseEnvOrFile(name string) string {
 		b, err := ioutil.ReadFile(fileEnv)
 
 		if err == nil {
-			return string(b)
+			return strings.TrimSpace(string(b))
 		}
 	}
 
@@ -108,10 +118,29 @@ func parseServerFromRepo() string {
 		return server
 	}
 
-	u, err := url.Parse(os.Getenv("DRONE_REPO_LINK"))
+	// Attempt to resolve the server from various env variables
 
-	if err != nil {
-		log.Fatalln("Unable to parse DRONE_REPO_LINK for gitea url")
+	envs := []string{
+		"DRONE_REPO_LINK",
+		"DRONE_GIT_HTTP_URL",
+	}
+
+	for _, env := range envs {
+		server = os.Getenv(env)
+
+		if server != "" {
+			break
+		}
+	}
+
+	if server == "" {
+		log.Fatalln("Unable to find server in env variables")
+	}
+
+	u, err := url.Parse(server)
+
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		log.Fatalln("Unable to parse env for gitea url")
 	}
 
 	u.Path = ""
